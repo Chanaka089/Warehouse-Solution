@@ -1,0 +1,40 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "352f02244a8f9809c7f86554ee96f020"
+name = "FT 2"
+application_url = "https://example.com"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+
+[webhooks]
+api_version = "2026-10"
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/uninstalled"
+  topics = [ "app/uninstalled" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/scopes_update"
+  topics = [ "app/scopes_update" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/orders/create"
+  topics = [ "orders/create" ]
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+# Added read_orders/write_orders so the app can read line item properties and
+# tag orders with the chosen warehouse(s).
+scopes = "read_assigned_fulfillment_orders,read_fulfillments,read_inventory,read_locations,read_merchant_managed_fulfillment_orders,read_orders,read_products,write_assigned_fulfillment_orders,write_fulfillments,write_merchant_managed_fulfillment_orders,write_orders"
+
+[app_proxy]
+# Storefront JS calls https://{shop}/apps/warehouse and Shopify proxies it to
+# {application_url}/apps/warehouse (signed, so we can trust the request).
+url = "https://example.com/apps/warehouse"
+prefix = "apps"
+subpath = "warehouse"
+
+[auth]
+redirect_urls = [ "https://example.com/api/auth" ]

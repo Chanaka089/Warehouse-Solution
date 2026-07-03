@@ -1,0 +1,35 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+client_id = "ce0a3fe482245ee98fb97660b175524c"
+application_url = "https://example.com"
+embedded = true
+name = "Warehouse FT"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_inventory,read_locations,read_orders,read_products,write_orders"
+
+[auth]
+redirect_urls = [ ]
+
+[webhooks]
+api_version = "2026-10"
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/uninstalled"
+  topics = [ "app/uninstalled" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/scopes_update"
+  topics = [ "app/scopes_update" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/orders/create"
+  topics = [ "orders/create" ]
+
+[app_proxy]
+url = "https://example.com/apps/warehouse"
+prefix = "apps"
+subpath = "warehouse"
+
+[build]
+automatically_update_urls_on_dev = true

@@ -1,0 +1,157 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "main": {
+      "type": "main-product--default",
+      "blocks": {
+        "product_header": {
+          "type": "product_header",
+          "settings": {
+            "show_divider": true,
+            "show_vendor": false,
+            "show_sku": true,
+            "show_price": false,
+            "show_discount": false,
+            "discount_format": "percent_off",
+            "show_shop_pay": false,
+            "show_product_rating": false,
+            "show_rating_count": false,
+            "rating_style": "regular",
+            "show_sale_badge": false,
+            "show_new_badge": false,
+            "show_custom_badges": true,
+            "product_header_always_top_mobile": "above"
+          }
+        },
+        "product_labels": {
+          "type": "product_labels",
+          "disabled": true,
+          "settings": {
+            "heading": "",
+            "icon_size": 24,
+            "label_style": "block_heading",
+            "outline": true,
+            "icon_1": "delivery-truck-left",
+            "text_1": "Fast Shipping",
+            "icon_2": "shield-lock",
+            "text_2": "Secure payment",
+            "icon_3": "chat-support",
+            "text_3": "",
+            "icon_4": "none",
+            "text_4": "",
+            "icon_5": "none",
+            "text_5": "",
+            "icon_6": "none",
+            "text_6": ""
+          }
+        },
+        "price_WANjBm": {
+          "type": "price",
+          "settings": {
+            "label": "Price:",
+            "show_discount": false,
+            "discount_format": "percent_off",
+            "show_shop_pay": false
+          }
+        },
+        "variant_picker": {
+          "type": "variant_picker",
+          "disabled": true,
+          "settings": {
+            "variant_popup_option": "Size",
+            "variant_popup_icon": "measuring-tape",
+            "variant_popup_text": "Size guide",
+            "variant_popup_page": "",
+            "swatch_size": "medium",
+            "siblings_show_product_image": true,
+            "siblings_option_name": "Color",
+            "chip_layout": "3col"
+          }
+        },
+        "custom_liquid_V4fb7E": {
+          "type": "custom_liquid",
+          "settings": {
+            "column_placement": "right",
+            "custom_liquid": "{% render 'warehouse-stock-selector', prod: product, current_variant: product.selected_or_first_available_variant %}"
+          }
+        },
+        "buy_buttons": {
+          "type": "buy_buttons",
+          "settings": {
+            "show_dynamic_checkout": false,
+            "enable_sticky_atc_bar_desktop": false,
+            "enable_sticky_atc_bar_mobile": false,
+            "drop_shadow": "none",
+            "show_quantity_selector": true,
+            "show_quantity_in_cart": true,
+            "show_pickup_availability": false
+          }
+        },
+        "description": {
+          "type": "description",
+          "settings": {
+            "column_placement": "right",
+            "title": "Description",
+            "text_font_class": "fs-body-100",
+            "truncate_num_lines": "4",
+            "display_as_collapsible_row": true,
+            "expand_by_default": true
+          }
+        },
+        "accordion-1": {
+          "type": "accordion",
+          "settings": {
+            "column_placement": "right",
+            "expand_by_default": false,
+            "heading": "Additional Info",
+            "content": "",
+            "page_for_content": "",
+            "custom_liquid": "<style>\n.table_component {\n    overflow: auto;\n    width: 100%;\n}\n\n.table_component table {\n    border: none;\n    height: 100%;\n    width: 100%;\n    table-layout: auto;\n    border-collapse: collapse;\n    border-spacing: 0px;\n    text-align: left;\n}\n\n.table_component td {\n    border: none !important;\n    padding: 16px;\ntext-wrap: nowrap;\nwidth: 100%;\n}\n\n.col-type {\nwidth: auto !important;\n}\n\n.table_component tr:nth-child(even) td {\n    background-color: #ffffff;\n}\n\n.table_component tr:nth-child(odd) td {\n    background-color: #eeeeee;\n}\n</style>\n<div class=\"table_component\" role=\"region\" tabindex=\"0\">\n<table>\n    <tbody>\n        <tr>\n            <td class=\"col-type\"><b>MSRP</b></td>\n            <td>\n                <div>${{ product.metafields.price.msrp }}</div>\n            </td>\n        </tr>\n        <tr>\n            <td class=\"col-type\"><b>Brand</b></td>\n            <td>{{ product.metafields.tag.brand }}</td>\n        </tr>\n        <tr>\n            <td class=\"col-type\"><b>Case Pack</b></td>\n            <td>{{ product.metafields.case.pack }}</td>\n        </tr>\n        <tr>\n            <td class=\"col-type\"><b>Unit Weight (lb)</b></td>\n            <td>{{ product.metafields.unit.weight }}</td>\n        </tr>\n        <tr>\n            <td class=\"col-type\"><b>Unit Length (in)</b></td>\n            <td>{{ product.metafields.unit.length }}</td>\n        </tr>\n        <tr>\n            <td class=\"col-type\"><b>Unit Width (in)</b></td>\n            <td>{{ product.metafields.unit.width }}</td>\n        </tr>\n        <tr>\n            <td class=\"col-type\"><b>Unit Height (in)</b></td>\n            <td>{{ product.metafields.unit.height }}</td>\n        </tr>\n    </tbody>\n</table>"
+          }
+        }
+      },
+      "block_order": [
+        "product_header",
+        "product_labels",
+        "price_WANjBm",
+        "variant_picker",
+        "custom_liquid_V4fb7E",
+        "buy_buttons",
+        "description",
+        "accordion-1"
+      ],
+      "settings": {
+        "enable_sticky_product_details": true,
+        "show_breadcrumbs": false,
+        "show_navigation_buttons": false,
+        "gallery_size": "medium",
+        "desktop_gallery_layout": "thumbnails",
+        "thumbnail_position": "left",
+        "thumbnail_size": "large",
+        "enable_video_looping": true,
+        "enable_product_lightbox": true,
+        "show_thumbs_in_product_lightbox": true,
+        "image_aspect_ratio": "square",
+        "enable_multiple_variant_media": false,
+        "enable_gift_card_recipient": false,
+        "show_recommended_products_on_desktop": false,
+        "show_recommended_products_on_mobile": false,
+        "max_recommended_products": 3,
+        "enable_quick_view_recommended_products": true,
+        "recommended_products_heading": "You may also like",
+        "section_style_enable_animation": true
+      }
+    }
+  },
+  "order": [
+    "main"
+  ]
+}

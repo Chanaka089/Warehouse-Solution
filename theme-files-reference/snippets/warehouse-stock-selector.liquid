@@ -1,0 +1,162 @@
+{%- comment -%}
+  Renders the "Select Warehouse" card UI and wires it to:
+    - GET /apps/warehouse?variant_id=...  (live per-location stock, via app proxy)
+    - the on-page product <form> (adds properties[Warehouse] / properties[_warehouse_location_id])
+
+  Required:
+    - prod: the product object
+  Optional:
+    - current_variant: the initially selected variant (defaults to prod.selected_or_first_available_variant)
+
+  Note: this file only renders markup + hooks up data attributes. All the
+  interactive behaviour lives in assets/warehouse-selector.js so it can be
+  iterated on without touching Liquid, and so it works the same way inside
+  quick-view/quick-add (which reuse this same section).
+{%- endcomment -%}
+
+{%- liquid
+  assign variant = current_variant | default: prod.selected_or_first_available_variant
+-%}
+
+<div
+  class="warehouse-block"
+  data-warehouse-block
+  data-product-id="{{ prod.id }}"
+  data-variant-id="{{ variant.id }}"
+  data-section-id="{{ section.id }}"
+  data-stock-endpoint="/apps/warehouse"
+>
+  <h3 class="warehouse-heading">{{ 'products.product.warehouse.heading' | t: default: 'Select Warehouse' }}</h3>
+
+  <div class="warehouse-selector" data-warehouse-cards role="radiogroup" aria-label="Select warehouse">
+    <p class="warehouse-loading" data-warehouse-loading>{{ 'products.product.warehouse.loading' | t: default: 'Checking live stock…' }}</p>
+  </div>
+
+  <p class="warehouse-error hidden" data-warehouse-error role="alert">
+    {{ 'products.product.warehouse.unavailable' | t: default: 'This item is currently unavailable at every warehouse.' }}
+  </p>
+
+  <template data-warehouse-card-template>
+    <label class="warehouse-card">
+      <input type="radio" data-warehouse-radio>
+      <div class="warehouse-inner">
+        <div class="selected-icon">✓</div>
+        <div class="warehouse-title" data-warehouse-name></div>
+        <div class="warehouse-address" data-warehouse-address></div>
+        <div class="warehouse-stock" data-warehouse-stock></div>
+      </div>
+    </label>
+  </template>
+</div>
+
+{%- comment -%} Load once even if this snippet is rendered more than once on a page (e.g. quick view). {%- endcomment -%}
+{%- unless request.page_type == 'password' -%}
+  {%- if 'warehouse-selector-js-loaded' == blank -%}
+    <script src="{{ 'warehouse-selector.js' | asset_url }}" defer></script>
+  {%- endif -%}
+{%- endunless -%}
+
+<style>
+  .warehouse-block { margin: 16px 0; }
+  .warehouse-heading {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 15px;
+  }
+  .warehouse-selector {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+  .warehouse-loading {
+    font-size: 14px;
+    color: #6b7280;
+  }
+  .warehouse-error {
+    margin-top: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #dc2626;
+  }
+  .warehouse-error.hidden { display: none; }
+  .warehouse-card {
+    position: relative;
+    cursor: pointer;
+  }
+  .warehouse-card[data-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  .warehouse-card input {
+    position: absolute;
+    opacity: 0;
+  }
+  .warehouse-inner {
+    position: relative;
+    width: 250px;
+    min-height: 140px;
+    padding: 18px;
+    border: 2px solid #e5e7eb;
+    border-radius: 14px;
+    background: #fff;
+    transition: all .2s ease;
+  }
+  .warehouse-card:hover .warehouse-inner {
+    transform: translateY(-2px);
+    border-color: #cbd5e1;
+    box-shadow: 0 8px 18px rgba(0,0,0,.08);
+  }
+  .warehouse-card[data-disabled="true"]:hover .warehouse-inner { transform: none; box-shadow: none; }
+  .warehouse-card input:checked + .warehouse-inner {
+    border-color: #008060;
+    background: #f7fffc;
+    box-shadow: 0 0 0 3px rgba(0,128,96,.12);
+  }
+  .selected-icon {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #008060;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(.8);
+    transition: .2s;
+  }
+  .warehouse-card input:checked + .warehouse-inner .selected-icon {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .warehouse-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 8px;
+    padding-right: 30px;
+  }
+  .warehouse-address {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  .warehouse-stock {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .warehouse-stock.high-stock { background: #dcfce7; color: #15803d; }
+  .warehouse-stock.low-stock { background: #fef3c7; color: #b45309; }
+  .warehouse-stock.critical-stock { background: #fef3c7; color: #b45309; }
+  .warehouse-stock.out-stock { background: #fee2e2; color: #dc2626; }
+</style>
