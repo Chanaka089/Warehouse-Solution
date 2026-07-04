@@ -65,7 +65,34 @@ function toNumericGid(idOrGid, resource) {
   return `gid://shopify/${resource}/${idOrGid}`;
 }
 
-export async function getWarehouseStock({ admin, variantId }) {
+const CUSTOMER_DEFAULT_WAREHOUSE_QUERY = `#graphql
+  query CustomerDefaultWarehouse($id: ID!) {
+    customer(id: $id) {
+      id
+      metafield(namespace: "warehouse_fulfillment", key: "default_location") {
+        value
+      }
+    }
+  }
+`;
+
+async function getCustomerDefaultWarehouseKey(admin, customerId) {
+  if (!admin || !customerId) return null;
+  const gid = toNumericGid(customerId, "Customer");
+
+  try {
+    const response = await admin.graphql(CUSTOMER_DEFAULT_WAREHOUSE_QUERY, {
+      variables: { id: gid },
+    });
+    const { data } = await response.json();
+    return data?.customer?.metafield?.value ?? null;
+  } catch (error) {
+    console.error("getCustomerDefaultWarehouseKey failed", error);
+    return null;
+  }
+}
+
+export async function getWarehouseStock({ admin, variantId, customerId }) {
   const gid = toNumericGid(variantId, "ProductVariant");
 
   const response = await admin.graphql(VARIANT_STOCK_QUERY, {
@@ -80,6 +107,7 @@ export async function getWarehouseStock({ admin, variantId }) {
 
   const tracked = variant.inventoryItem?.tracked ?? false;
   const levels = variant.inventoryItem?.inventoryLevels?.nodes ?? [];
+  const defaultWarehouseKey = await getCustomerDefaultWarehouseKey(admin, customerId);
 
   const warehouses = levels
     .filter((lvl) => lvl.location.isActive && lvl.location.fulfillsOnlineOrders)
@@ -100,7 +128,7 @@ export async function getWarehouseStock({ admin, variantId }) {
     // ties broken alphabetically for determinism.
     .sort((a, b) => b.available - a.available || a.name.localeCompare(b.name));
 
-  return { variantId: gid, tracked, warehouses };
+  return { variantId: gid, tracked, defaultWarehouseKey, warehouses };
 }
 
 /**
