@@ -1,5 +1,9 @@
 import { authenticate } from "../shopify.server";
-import { summarizeOrderWarehouses } from "../models/warehouseInventory.server";
+import {
+  summarizeOrderWarehouses,
+  buildLineItemWarehouseMap,
+  reassignFulfillmentOrdersToChosenWarehouses,
+} from "../models/warehouseInventory.server";
 
 const TAG_MUTATION = `#graphql
   mutation AddOrderTags($id: ID!, $tags: [String!]!) {
@@ -23,7 +27,6 @@ export const action = async ({ request }) => {
   console.log(`Received ${topic} webhook for ${shop}`);
 
   if (!admin) {
-    // Shop session missing/offline token revoked - nothing we can write with.
     console.warn(`No admin context for ${shop}, skipping warehouse tagging.`);
     return new Response();
   }
@@ -31,8 +34,6 @@ export const action = async ({ request }) => {
   const orderGid = `gid://shopify/Order/${payload.id}`;
   const summary = summarizeOrderWarehouses(payload.line_items || []);
 
-  // 1. Human-readable tags so staff can filter/search orders in Admin,
-  //    e.g. "Warehouse: East", "Warehouse: West", "Warehouse: Both Warehouses".
   const tags = [`Warehouse: ${summary.label}`];
 
   const tagResponse = await admin.graphql(TAG_MUTATION, {
@@ -44,10 +45,6 @@ export const action = async ({ request }) => {
     console.error("tagsAdd errors", tagErrors);
   }
 
-  // 2. Structured, machine-readable metafield so a future ERP connection (or
-  //    any other app/script) can read one field instead of re-parsing line
-  //    item properties. Namespace is scoped to this feature so it never
-  //    collides with unrelated metafields.
   const metafieldResponse = await admin.graphql(METAFIELD_MUTATION, {
     variables: {
       metafields: [
@@ -70,6 +67,31 @@ export const action = async ({ request }) => {
   const metafieldErrors = metafieldResult.data?.metafieldsSet?.userErrors ?? [];
   if (metafieldErrors.length) {
     console.error("metafieldsSet errors", metafieldErrors);
+  }
+
+  // 3. Make the choice binding: move each fulfillment order's line items to
+  //    the location the customer actually picked, if Shopify's own default
+  //    routing put them somewhere else. This is what makes Shopify's real
+  //    location_id (what your Acumatica connector reads) match the customer's
+  //    choice, instead of just being recorded as text on the order.
+  try {
+    const lineItemLocationMap = buildLineItemWarehouseMap(summary.lineItems);
+    const reassignResult = await reassignFulfillmentOrdersToChosenWarehouses({
+      admin,
+      orderGid,
+      lineItemLocationMap,
+    });
+    console.log("fulfillment order reassignment result", {
+      shop,
+      orderGid,
+      ...reassignResult,
+    });
+  } catch (error) {
+    console.error("reassignFulfillmentOrdersToChosenWarehouses failed", {
+      shop,
+      orderGid,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 
   return new Response();

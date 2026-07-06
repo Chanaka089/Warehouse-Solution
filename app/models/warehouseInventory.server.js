@@ -42,9 +42,6 @@ const VARIANT_STOCK_QUERY = `#graphql
   }
 `;
 
-// Turns "EAST Warehouse" -> "east", "West Warehouse" -> "west", so the
-// frontend always has a short, stable key to key off of regardless of how
-// a merchant later renames/relabels a location in Shopify admin.
 export function locationKey(name) {
   return name
     .toLowerCase()
@@ -124,21 +121,137 @@ export async function getWarehouseStock({ admin, variantId, customerId }) {
         level: stockLevel(available),
       };
     })
-    // Stable order: highest stock first so the UI doesn't jump around,
-    // ties broken alphabetically for determinism.
     .sort((a, b) => b.available - a.available || a.name.localeCompare(b.name));
 
   return { variantId: gid, tracked, defaultWarehouseKey, warehouses };
 }
 
 /**
- * Given the raw line_items array from an orders/create (or orders/updated)
- * webhook payload, extract which warehouse(s) were chosen.
- *
- * Looks for a line item property literally named "Warehouse" - this is the
- * same property name the theme writes at add-to-cart time, so this stays in
- * sync by construction rather than by convention scattered across files.
+ * Reads which native Shopify Location each fulfillment order is currently
+ * assigned to, compares it against the warehouse the customer actually chose
+ * (carried on the order's line item properties), and uses fulfillmentOrderMove
+ * to correct any mismatch. This is what makes the customer's choice bind to
+ * Shopify's real location_id - the field your Acumatica connector reads -
+ * rather than just being informational text on the order.
  */
+const ORDER_FULFILLMENT_ORDERS_QUERY = `#graphql
+  query OrderFulfillmentOrders($id: ID!) {
+    order(id: $id) {
+      fulfillmentOrders(first: 20) {
+        nodes {
+          id
+          status
+          assignedLocation {
+            location { id }
+          }
+          lineItems(first: 50) {
+            nodes {
+              id
+              remainingQuantity
+              lineItem { id }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+const FULFILLMENT_ORDER_MOVE_MUTATION = `#graphql
+  mutation MoveFulfillmentOrder($id: ID!, $newLocationId: ID!, $fulfillmentOrderLineItems: [FulfillmentOrderLineItemInput!]) {
+    fulfillmentOrderMove(id: $id, newLocationId: $newLocationId, fulfillmentOrderLineItems: $fulfillmentOrderLineItems) {
+      movedFulfillmentOrder { id status }
+      originalFulfillmentOrder { id status }
+      userErrors { field message }
+    }
+  }
+`;
+
+export function buildLineItemWarehouseMap(lineItems = []) {
+  const map = new Map();
+  for (const item of lineItems) {
+    if (item.warehouseLocationId) {
+      map.set(`gid://shopify/LineItem/${item.lineItemId}`, item.warehouseLocationId);
+    }
+  }
+  return map;
+}
+
+export async function reassignFulfillmentOrdersToChosenWarehouses({
+  admin,
+  orderGid,
+  lineItemLocationMap,
+}) {
+  if (!lineItemLocationMap.size) return { moves: [], skipped: "no-warehouse-choices" };
+
+  const response = await admin.graphql(ORDER_FULFILLMENT_ORDERS_QUERY, {
+    variables: { id: orderGid },
+  });
+  const { data } = await response.json();
+  const fulfillmentOrders = data?.order?.fulfillmentOrders?.nodes ?? [];
+
+  const moves = [];
+
+  for (const fo of fulfillmentOrders) {
+    if (fo.status === "CLOSED" || fo.status === "CANCELLED") continue;
+
+    const currentLocationId = fo.assignedLocation?.location?.id;
+    const byTargetLocation = new Map();
+
+    for (const foLineItem of fo.lineItems.nodes) {
+      if (foLineItem.remainingQuantity <= 0) continue;
+
+      const targetLocationId = lineItemLocationMap.get(foLineItem.lineItem.id);
+      if (!targetLocationId || targetLocationId === currentLocationId) continue;
+
+      if (!byTargetLocation.has(targetLocationId)) byTargetLocation.set(targetLocationId, []);
+      byTargetLocation.get(targetLocationId).push({
+        id: foLineItem.id,
+        quantity: foLineItem.remainingQuantity,
+      });
+    }
+
+    for (const [targetLocationId, items] of byTargetLocation.entries()) {
+      try {
+        const moveResponse = await admin.graphql(FULFILLMENT_ORDER_MOVE_MUTATION, {
+          variables: {
+            id: fo.id,
+            newLocationId: targetLocationId,
+            fulfillmentOrderLineItems: items,
+          },
+        });
+        const moveResult = await moveResponse.json();
+        const userErrors = moveResult.data?.fulfillmentOrderMove?.userErrors ?? [];
+
+        if (userErrors.length) {
+          console.error("fulfillmentOrderMove userErrors", {
+            orderGid,
+            fulfillmentOrderId: fo.id,
+            targetLocationId,
+            userErrors,
+          });
+        }
+
+        moves.push({
+          fulfillmentOrderId: fo.id,
+          targetLocationId,
+          itemCount: items.length,
+          userErrors,
+        });
+      } catch (error) {
+        console.error("fulfillmentOrderMove failed", {
+          orderGid,
+          fulfillmentOrderId: fo.id,
+          targetLocationId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  }
+
+  return { moves };
+}
+
 export function summarizeOrderWarehouses(lineItems = []) {
   const perLineItem = lineItems.map((item) => {
     const props = item.properties || [];
