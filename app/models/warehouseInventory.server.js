@@ -16,6 +16,7 @@ const VARIANT_STOCK_QUERY = `#graphql
     productVariant(id: $id) {
       id
       title
+      inventoryPolicy
       inventoryItem {
         id
         tracked
@@ -123,7 +124,11 @@ export async function getWarehouseStock({ admin, variantId, customerId }) {
     })
     .sort((a, b) => b.available - a.available || a.name.localeCompare(b.name));
 
-  return { variantId: gid, tracked, defaultWarehouseKey, warehouses };
+  const continueSellingOutOfStock = variant.inventoryPolicy === "CONTINUE";
+
+  return { variantId: gid, tracked, defaultWarehouseKey, continueSellingOutOfStock, warehouses };
+
+
 }
 
 /**
